@@ -1,0 +1,226 @@
+<?=$this->tpl_init('header');?>
+<style>
+    .tasks-header {
+        display: flex;
+        height: 55px;
+    }
+    .tasks-header div {
+        display: flex;
+    }
+    .card, .alert {
+        margin-top: 20px;
+    }
+    .btn-group {
+        margin-left: 10px;
+    }
+    .hidden {
+        display: none;
+    }
+</style>
+<div class="row">
+    <div class="col-sm-8">
+        <div class="card">
+            <h5 class="card-header">Add task</h5>
+            <div class="card-body">
+                <form action="/" method="POST">
+                    <input type="hidden" name="_method" value="PUT">
+                    <input type="hidden" name="action" value="create">
+                    <div class="row">
+                        <div class="form-group col-md-6">
+                            <label for="exampleInputEmail1">Name</label>
+                            <input name="username" type="text" class="form-control" placeholder="Username">
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="exampleInputEmail1">Email</label>
+                            <input name="email" type="email" class="form-control" placeholder="email@mail.net">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputEmail1">Title</label>
+                        <input name="title" type="text" class="form-control" placeholder="">
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputPassword1">Full task</label>
+                        <textarea name="task" type="text" class="form-control" placeholder=""></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-secondary btn-block">Add</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <?=$this->tpl_init('auth');?>
+    </div>
+</div>
+
+<div class="card">
+    <h5 class="card-header tasks-header justify-content-between">
+        <span>Tasks</span>
+        <div>
+            <div class="btn-group" role="group">
+                <button id="sortByName" class="btn btn-secondary btn-sm">Sort by Name</button>
+                <button id="sortByEmail" class="btn btn-secondary btn-sm">Sort by Email</button>
+                <button id="sortByStatus" class="btn btn-secondary btn-sm">Sort by Status</button>
+            </div>
+            <div class="btn-group" role="group">
+                <button class="btn btn-secondary btn-sm disabled">Page</button>
+                <? for($i = 1; $i < $Lastpage+1; $i++) : ?>
+                    <button id="paginator-<?=$i;?>" class="btn btn-secondary btn-sm page-changer page-button" value="<?=$i;?>"><?=$i;?></button>
+                <? endfor; ?>
+            </div>
+        </div> 
+    </h5>
+</div>
+
+<div id="tasks">
+    <? foreach($Tasks as $Task) : ?>
+        <!-- show -->
+        <div id="show-<?=$Task->id;?>" class="alert <? if($Task->is_completed) : ?>alert-success<? else : ?>alert-secondary<? endif; ?>">
+            <h4 class="alert-heading justify-content-between" style="display: flex">
+                <span>
+                    #<?=$Task->id;?> <?=$Task->title;?>
+                </span>
+                <? if(isset($User->is_admin)) : ?>
+                    <? if($User->is_admin): ?>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-primary btn-sm edit" value="<?=$Task->id;?>">Edit</button>
+                            <button class="btn btn-success btn-sm complite" value="<?=$Task->id;?>">Completed</button>
+                        </div>
+                    <? endif; ?>
+                <? endif; ?>
+            </h4>
+            <p><?=$Task->task;?></p>
+            <hr>
+            <p class="mb-0"><?=$Task->user_name;?> | <?=$Task->user_email;?></p>
+        </div>
+        <!-- edit -->
+        <div id="edit-<?=$Task->id;?>" class="card hidden">
+            <h5 class="card-header i">Edit task #<?=$Task->id;?></h5>
+            <div class="card-body">
+                <form action="/" method="POST">
+                    <input type="hidden" name="_method" value="UPDATE">
+                    <input type="hidden" name="action" value="update">
+                    <input type="hidden" name="id" value="<?=$Task->id;?>">
+                    <div class="row">
+                        <div class="form-group col-md-6">
+                            <label for="exampleInputEmail1">Name</label>
+                            <input name="username" type="text" class="form-control" placeholder="Username" value="<?=$Task->user_name;?>">
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="exampleInputEmail1">Email</label>
+                            <input name="email" type="email" class="form-control" placeholder="email@mail.net" value="<?=$Task->user_email;?>">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputEmail1">Title</label>
+                        <input name="title" type="text" class="form-control" placeholder="" value="<?=$Task->title;?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputPassword1">Full task</label>
+                        <textarea name="task" type="text" class="form-control" placeholder=""><?=$Task->task;?></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-secondary btn-block">Save</button>
+                </form>
+            </div>
+        </div>
+    <? endforeach; ?>
+</div>
+
+<?=$this->tpl_init('scripts');?>
+
+<script type="text/javascript">
+
+    var page = 1;
+    var sortBy = "id";
+    var sortType = "desc";
+    
+    $(document).ready(function(){
+        $('#tasks').on("click", "button", function(element)
+        {
+            if(this.classList.contains("edit"))
+            {
+                $('#show-'+this.value).hide();
+                $('#edit-'+this.value).show();
+            }
+            else if(this.classList.contains("complite"))
+            {
+                $('#show-'+this.value).addClass("alert-success");
+                $('#show-'+this.value).removeClass("alert-secondary");
+
+                $.ajax({
+                    url: '/',
+                    method: 'POST',
+                    data: {
+                        '_method': 'UPDATE',
+                        'action': 'complite',
+                        'id': this.value
+                    },
+                    success: function(html){
+
+                    }
+                });
+            }
+        });
+
+        $('#sortByName').click(function()
+        {
+            $('#sortByName').addClass("active");
+            $("#sortByEmail").removeClass("active");
+            $("#sortByStatus").removeClass("active");
+            sortBy = "sortByName";
+            if(sortType == "desc") sortType = "asc";
+            else sortType = "desc";
+            getContent();
+        });
+        $('#sortByEmail').click(function()
+        {
+            $('#sortByName').removeClass("active");
+            $("#sortByEmail").addClass("active");
+            $("#sortByStatus").removeClass("active");
+            sortBy = "sortByEmail";
+            if(sortType == "desc") sortType = "asc";
+            else sortType = "desc";
+            getContent();
+        });
+        $('#sortByStatus').click(function()
+        {
+            $('#sortByName').removeClass("active");
+            $("#sortByEmail").removeClass("active");
+            $("#sortByStatus").addClass("active");
+            sortBy = "sortByStatus";
+            if(sortType == "desc") sortType = "asc";
+            else sortType = "desc";
+            getContent();
+        });
+
+        $('.page-changer').click(function()
+        {
+            $(".page-button").removeClass("active");
+
+            page = this.value;
+            
+            $("#paginator-" + page).addClass("active");
+
+            getContent();
+        });
+        
+        function getContent()
+        {
+            $.ajax({
+                url: "/?" + sortBy + "=" + sortType + "&page=" + page,
+                cache: false,
+                beforeSend: function() {
+                    $('#tasks').html('Загружаем');
+                },
+                success: function(html){
+                    html=$(html).find('div#tasks');
+                    $("#tasks").html(html);
+                }
+            });
+            return false;
+        }
+    });
+
+</script>
+
+<?=$this->tpl_init('footer');?>
